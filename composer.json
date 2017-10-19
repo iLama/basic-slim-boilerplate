@@ -1,5 +1,5 @@
 {
-    "name": "iLama/basic-slim-boilerplate",
+    "name": "ilama/basic-slim-boilerplate",
     "description": "A basic boilerplate for the Slim PHP framework.",
     "keywords": ["slim", "semantic", "twig", "boilerplate", "framework", "gulp"],
     "homepage": "https://github.com/iLama/basic-slim-boilerplate",
