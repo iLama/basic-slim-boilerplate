@@ -3,8 +3,4 @@ vendor/
 
 node_modules/
 
-logs/
-
-public/app/
-
 \.vscode/
