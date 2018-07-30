@@ -2,25 +2,30 @@
 var gulp = require('gulp'),
     php = require('gulp-connect-php'),
     sourcemaps = require('gulp-sourcemaps'),
-    concat = require('gulp-concat'),
     autoprefixer = require('gulp-autoprefixer'),
     sass = require('gulp-sass'),
     browserSync = require('browser-sync'),
-    streamqueue = require('streamqueue'),
     vinyl = require('vinyl-source-stream'),
     babelify = require('babelify'),
     watchify = require('watchify'),
     exorcist = require('exorcist'),
-    browserify = require('browserify');
+    browserify = require('browserify'),
+    cache = require('gulp-cache'),
+    imagemin = require('gulp-imagemin'),
+    imageminPngquant = require('imagemin-pngquant'),
+    imageminZopfli = require('imagemin-zopfli'),
+    imageminMozjpeg = require('imagemin-mozjpeg'),
+    imageminGiflossy = require('imagemin-giflossy');
 
 var paths = {
     php: [
         'public/**/*.php',
-        'src/php/**/*.php',
+        'src/**/*.php',
     ],
-    buildFolder: 'public/app',
-    sass: 'src/scss/**/*.scss',
-    js: 'src/js/app.js',
+    buildFolder: 'public/assets',
+    sass: 'assets/scss/**/*.scss',
+    js: 'assets/js/app.js',
+    images: 'assets/images/**/*.{gif,png,jpg,svg}',
     twig: 'templates/**/*.twig'
 };
 
@@ -68,7 +73,7 @@ gulp.task('serve', function () {
 // Setup Watcher
 gulp.task('watch', function () {
     gulp.watch(paths.sass, ['sass']).on('change', browserSync.stream);
-    //gulp.watch(paths.js, ['js']).on('change', browserSync.reload);
+    // gulp.watch(paths.images, ['imagemin']).on('change', browserSync.reload);
     gulp.watch(paths.php).on('change', browserSync.reload);
     gulp.watch(paths.twig).on('change', browserSync.reload);
 });
@@ -88,5 +93,37 @@ gulp.task('sass', function () {
         .pipe(gulp.dest(paths.buildFolder + '/css/'));
 });
 
+// Image stuff still working on
+gulp.task('imagemin', function () {
+    return gulp.src([paths.images])
+        .pipe(cache(imagemin([
+            imageminPngquant({
+                speed: 1,
+                quality: 98
+            }),
+            imageminZopfli({
+                more: true
+            }),
+            imageminGiflossy({
+                optimizationLevel: 3,
+                optimize: 3,
+                lossy: 2
+            }),
+            //svg
+            imagemin.svgo({
+                plugins: [{
+                    removeViewBox: false
+                }]
+            }),
+            imagemin.jpegtran({
+                progressive: true
+            }),
+            imageminMozjpeg({
+                quality: 90
+            })
+        ])))
+        .pipe(gulp.dest(paths.buildFolder + '/images'));
+});
+
 // Default launch server, compile sass and js, and watch for changes
-gulp.task('default', ['serve', 'sass', 'bundle', 'watch']);
+gulp.task('default', ['serve', 'imagemin', 'sass', 'bundle', 'watch']);
