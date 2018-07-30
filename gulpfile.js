@@ -1,85 +1,129 @@
-const gulp         = require('gulp');
-const autoprefixer = require('gulp-autoprefixer');
-const babel        = require('gulp-babel');
-const cleanCSS     = require('gulp-clean-css');
-const concat       = require('gulp-concat');
-const rename       = require('gulp-rename');
-const sass         = require('gulp-sass');
-const sourcemaps   = require('gulp-sourcemaps');
-const uglify       = require('gulp-uglify');
-const pump         = require('pump');
-const browserSync  = require('browser-sync');
+// Sass configuration
+var gulp = require('gulp'),
+    php = require('gulp-connect-php'),
+    sourcemaps = require('gulp-sourcemaps'),
+    autoprefixer = require('gulp-autoprefixer'),
+    sass = require('gulp-sass'),
+    browserSync = require('browser-sync'),
+    vinyl = require('vinyl-source-stream'),
+    babelify = require('babelify'),
+    watchify = require('watchify'),
+    exorcist = require('exorcist'),
+    browserify = require('browserify'),
+    cache = require('gulp-cache'),
+    imagemin = require('gulp-imagemin'),
+    imageminPngquant = require('imagemin-pngquant'),
+    imageminZopfli = require('imagemin-zopfli'),
+    imageminMozjpeg = require('imagemin-mozjpeg'),
+    imageminGiflossy = require('imagemin-giflossy');
 
-let sassFiles = 'templates/assets/scss/*.scss';
-let jsFiles   = 'templates/assets/js/*.js';
-let twigFiles = 'templates/*.twig';
-let srcFiles  = 'src/*';
-let dest      = 'public/assets/';
+var paths = {
+    php: [
+        'public/**/*.php',
+        'src/**/*.php',
+    ],
+    buildFolder: 'public/assets',
+    sass: 'assets/scss/**/*.scss',
+    js: 'assets/js/app.js',
+    images: 'assets/images/**/*.{gif,png,jpg,svg}',
+    twig: 'templates/**/*.twig'
+};
 
-gulp.task('sass', function () {
-    return gulp.src(sassFiles)
-        .pipe(sourcemaps.init())
-        .pipe(autoprefixer())
-        .pipe(sass().on('error', sass.logError))
-        .pipe(concat('app.css'))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest(dest + 'css/'));
+// Watchify args contains necessary cache options to achieve fast incremental bundles.
+// See watchify readme for details. Adding debug true for source-map generation.
+watchify.args.debug = true;
+// Input file.
+var bundler = watchify(browserify(paths.js, watchify.args));
+
+// Babel transform
+bundler.transform(babelify.configure({
+    sourceMapRelative: paths.buildFolder + '/js'
+}));
+
+// On updates recompile
+bundler.on('update', bundle);
+
+function bundle() {
+
+
+    return bundler.bundle()
+        .on('error', function (err) {
+            browserSync.notify("Browserify Error!");
+            this.emit("end");
+        })
+        .pipe(exorcist(paths.buildFolder + '/js/app.js.map'))
+        .pipe(vinyl('app.js'))
+        .pipe(gulp.dest(paths.buildFolder + '/js'))
+        .pipe(browserSync.stream({ once: true }));
+}
+
+
+// Init Server
+gulp.task('serve', function () {
+    php.server({
+        port: 8383,
+        base: "./public/"
+    }, function () {
+        browserSync({
+            proxy: '127.0.0.1:8383'
+        })
+    })
 });
 
-gulp.task('javascript', function () {
-    return gulp.src(jsFiles)
-        .pipe(sourcemaps.init())
-        .pipe(babel({
-            presets: ['env']
-        }))
-        .pipe(concat('app.js'))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest(dest + 'js/'));
-});
-
-gulp.task('minify-css', function () {
-    return gulp.src(dest + 'css/*.css')
-        .pipe(cleanCSS())
-        .pipe(rename({ suffix: '.min' }))
-        .pipe(gulp.dest(dest + 'css/'));
-});
-
-gulp.task('minify-js', function (cb) {
-    pump([
-        gulp.src(dest + 'js/*.js'),
-        uglify(),
-        rename({ suffix: '.min' }),
-        gulp.dest(dest + 'js/')
-    ], cb);
-});
-
-gulp.task('minify', ['minify-css', 'minify-js']);
-
-gulp.task('build', ['sass', 'javascript']);
-
-gulp.task('prod', ['build', 'minify']);
-
+// Setup Watcher
 gulp.task('watch', function () {
-    gulp.watch(sassFiles, ['sass'], function (done) {
-        browserSync.stream();
-    });
-    gulp.watch(jsFiles, ['javascript'], function (done) {
-        browserSync.reload();
-        done();
-    });
-    gulp.watch(twigFiles, ['sass', 'javascript'], function (done) {
-        browserSync.reload();
-        done();
-    });
-    gulp.watch(srcFiles, ['sass', 'javascript'], function (done) {
-        browserSync.reload();
-        done();
-    });
-    browserSync.init(null, {
-        // Proxy address
-        proxy: 'localhost:8080',
-        port: 5000
-    });
+    gulp.watch(paths.sass, ['sass']).on('change', browserSync.stream);
+    // gulp.watch(paths.images, ['imagemin']).on('change', browserSync.reload);
+    gulp.watch(paths.php).on('change', browserSync.reload);
+    gulp.watch(paths.twig).on('change', browserSync.reload);
 });
 
-gulp.task('default', ['build', 'watch']);
+// Browserify bundler
+gulp.task('bundle', function () {
+    return bundle();
+});
+
+// Compile sass into CSS & auto-inject into browsers
+gulp.task('sass', function () {
+    return gulp.src(paths.sass)
+        .pipe(sourcemaps.init())
+        .pipe(sass())
+        .pipe(sourcemaps.write())
+        .pipe(autoprefixer())
+        .pipe(gulp.dest(paths.buildFolder + '/css/'));
+});
+
+// Image stuff still working on
+gulp.task('imagemin', function () {
+    return gulp.src([paths.images])
+        .pipe(cache(imagemin([
+            imageminPngquant({
+                speed: 1,
+                quality: 98
+            }),
+            imageminZopfli({
+                more: true
+            }),
+            imageminGiflossy({
+                optimizationLevel: 3,
+                optimize: 3,
+                lossy: 2
+            }),
+            //svg
+            imagemin.svgo({
+                plugins: [{
+                    removeViewBox: false
+                }]
+            }),
+            imagemin.jpegtran({
+                progressive: true
+            }),
+            imageminMozjpeg({
+                quality: 90
+            })
+        ])))
+        .pipe(gulp.dest(paths.buildFolder + '/images'));
+});
+
+// Default launch server, compile sass and js, and watch for changes
+gulp.task('default', ['serve', 'imagemin', 'sass', 'bundle', 'watch']);

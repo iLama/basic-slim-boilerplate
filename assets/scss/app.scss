@@ -1,0 +1,36 @@
+@charset 'UTF-8';
+
+// 1. Variables, functions, and mixins
+@import
+    'abstracts/variables',
+    'abstracts/functions',
+    'abstracts/mixins';
+
+// 2. Import default variables and available mixins.
+@import 
+    '../../node_modules/uikit/src/scss/variables',
+    '../../node_modules/uikit/src/scss/mixins';
+
+// 3. Base styling
+@import
+  'base/base',
+  'base/fonts',
+  'base/typography',
+  'base/helpers';
+
+// 4. Layout-related sections
+@import
+  'layout/header',
+  'layout/footer';
+
+// 5. Components
+@import
+  'components/button';
+
+// Page-specific Styles
+@import
+    'pages/home';
+
+// 4. Import UIkit
+@import 
+    '../../node_modules/uikit/src/scss/uikit';

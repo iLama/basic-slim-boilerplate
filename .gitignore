@@ -1,9 +1,6 @@
-/node_modules/
-/vendor/
-/logs/
-!/logs/.gitkeep
-/public/assets/lib/
-/public/assets/css/
-!/public/assets/css/.gitkeep
-/public/assets/js/
-!/public/assets/js/.gitkeep
+
+vendor/
+
+node_modules/
+
+\.vscode/
