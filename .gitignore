@@ -4,3 +4,9 @@ vendor/
 node_modules/
 
 \.vscode/
+
+public/assets/css/
+
+public/assets/js/
+
+var/logs/

@@ -54,7 +54,7 @@ function bundle() {
         .pipe(exorcist(paths.buildFolder + '/js/app.js.map'))
         .pipe(vinyl('app.js'))
         .pipe(gulp.dest(paths.buildFolder + '/js'))
-        .pipe(browserSync.stream({ once: true }));
+        .pipe(browserSync.reload({ stream: true }));
 }
 
 
@@ -72,7 +72,7 @@ gulp.task('serve', function () {
 
 // Setup Watcher
 gulp.task('watch', function () {
-    gulp.watch(paths.sass, ['sass']).on('change', browserSync.stream);
+    gulp.watch(paths.sass, ['sass']).on('change');
     // gulp.watch(paths.images, ['imagemin']).on('change', browserSync.reload);
     gulp.watch(paths.php).on('change', browserSync.reload);
     gulp.watch(paths.twig).on('change', browserSync.reload);
@@ -90,7 +90,8 @@ gulp.task('sass', function () {
         .pipe(sass())
         .pipe(sourcemaps.write())
         .pipe(autoprefixer())
-        .pipe(gulp.dest(paths.buildFolder + '/css/'));
+        .pipe(gulp.dest(paths.buildFolder + '/css/'))
+        .pipe( browserSync.reload({stream: true}));
 });
 
 // Image stuff still working on
